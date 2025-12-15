@@ -1,0 +1,292 @@
+
+**guide pratique prêt à copier-coller** pour tester l'API Todo **directement depuis le terminal** avec `curl`.
+
+---
+
+# **Guide pratique de test de l’API Todo**
+
+## **1️⃣ Vérifier que le serveur tourne**
+
+```bash
+npm run dev
+```
+
+ou
+
+```bash
+node ./src/server.js
+```
+
+* Le serveur doit être actif sur : `http://localhost:3000`
+* Si tout va bien, aucune erreur dans le terminal
+
+---
+
+## **2️⃣ Tester GET `/api/todos`**
+
+Récupérer toutes les tâches :
+
+```bash
+curl -X GET http://localhost:3000/api/todos
+```
+
+* Résultat attendu (vide au début) :
+
+```json
+[]
+```
+
+---
+
+## **3️⃣ Tester POST `/api/todos`**
+
+### Créer une nouvelle tâche
+
+```bash
+curl -X POST http://localhost:3000/api/todos \
+-H "Content-Type: application/json" \
+-d '{"title":"Apprendre Node"}'
+```
+
+* Résultat attendu :
+
+```json
+{
+  "id": 1,
+  "title": "Apprendre Node",
+  "completed": false
+}
+```
+
+### Créer plusieurs tâches
+
+```bash
+curl -X POST http://localhost:3000/api/todos \
+-H "Content-Type: application/json" \
+-d '{"title":"Faire les courses"}'
+
+curl -X POST http://localhost:3000/api/todos \
+-H "Content-Type: application/json" \
+-d '{"title":"Lire un livre"}'
+```
+
+* Chaque tâche aura un **ID unique** incrémenté automatiquement
+
+---
+
+### Tester règle métier : titre obligatoire
+
+```bash
+curl -X POST http://localhost:3000/api/todos \
+-H "Content-Type: application/json" \
+-d '{"title":""}'
+```
+
+* Résultat attendu : erreur 400 avec message
+
+```json
+{ "error": "Le titre est obligatoire" }
+```
+
+---
+
+## **4️⃣ Vérifier à nouveau GET**
+
+```bash
+curl -X GET http://localhost:3000/api/todos
+```
+
+* Résultat attendu : toutes les tâches créées précédemment
+
+```json
+[
+  { "id": 1, "title": "Apprendre Node", "completed": false },
+  { "id": 2, "title": "Faire les courses", "completed": false },
+  { "id": 3, "title": "Lire un livre", "completed": false }
+]
+```
+
+---
+
+## **5️⃣ Astuces supplémentaires**
+
+### Tester dans un navigateur
+
+* `GET /api/todos` → tape directement :
+
+```
+http://localhost:3000/api/todos
+```
+
+### Créer une route racine `/` pour tester facilement
+
+Dans `app.js` :
+
+```js
+app.get('/', (req, res) => {
+  res.send('Bienvenue sur l\'API Todo ! Utilisez /api/todos pour les tâches.');
+});
+```
+
+* Ensuite, `GET /` → affiche un message au lieu de “Cannot GET /”
+
+---
+
+✅ Avec ces commandes, tu peux **tester toutes les fonctionnalités de ton API Todo** sans Postman, juste dans le terminal.
+
+---
+
+
+**script Bash complet** prêt à copier-coller dans Git Bash / WSL / Linux, qui teste l'API Todo de bout en bout :
+
+* Vérifie le serveur
+* Crée plusieurs tâches
+* Teste la règle métier (titre obligatoire)
+* Affiche la liste finale des tâches
+
+---
+
+### **script-test-todo.sh**
+
+```bash
+#!/bin/bash
+
+echo "=== Test API Todo ==="
+
+# 1️⃣ Vérifier que le serveur tourne
+echo
+echo ">>> GET /api/todos (initial)"
+curl -s -X GET http://localhost:3000/api/todos | jq
+echo -e "\n"
+
+# 2️⃣ Créer une nouvelle tâche
+echo ">>> POST /api/todos : 'Apprendre Node'"
+curl -s -X POST http://localhost:3000/api/todos \
+-H "Content-Type: application/json" \
+-d '{"title":"Apprendre Node"}' | jq
+echo -e "\n"
+
+echo ">>> POST /api/todos : 'Faire les courses'"
+curl -s -X POST http://localhost:3000/api/todos \
+-H "Content-Type: application/json" \
+-d '{"title":"Faire les courses"}' | jq
+echo -e "\n"
+
+echo ">>> POST /api/todos : 'Lire un livre'"
+curl -s -X POST http://localhost:3000/api/todos \
+-H "Content-Type: application/json" \
+-d '{"title":"Lire un livre"}' | jq
+echo -e "\n"
+
+# 3️⃣ Tester la règle métier (titre vide)
+echo ">>> POST /api/todos : titre vide (doit échouer)"
+curl -s -X POST http://localhost:3000/api/todos \
+-H "Content-Type: application/json" \
+-d '{"title":""}' | jq
+echo -e "\n"
+
+# 4️⃣ Vérifier à nouveau GET
+echo ">>> GET /api/todos (final)"
+curl -s -X GET http://localhost:3000/api/todos | jq
+echo -e "\n"
+
+echo "=== Fin du test ==="
+```
+
+---
+
+### **Instructions pour l’utiliser**
+
+1. Crée un fichier `script-test-todo.sh` à la racine de ton projet
+2. Copie-colle le contenu ci-dessus
+3. Assure-toi que `jq` est installé (pour formater le JSON) :
+
+```bash
+sudo apt install jq      # Linux
+choco install jq         # Windows via Chocolatey
+```
+
+4. Donne les droits d’exécution :
+
+```bash
+chmod +x script-test-todo.sh
+```
+
+5. Lance le script **pendant que ton serveur tourne** :
+
+```bash
+./script-test-todo.sh
+```
+
+* Tu verras toutes les requêtes GET et POST s’exécuter automatiquement
+* Les réponses JSON seront joliment formatées grâce à `jq`
+
+---
+
+
+version **100% Git Bash / Windows**, sans dépendance externe (`jq`), prête à copier-coller et exécuter :
+
+---
+
+### **script-test-todo-windows.sh**
+
+```bash
+#!/bin/bash
+
+echo "=== Test API Todo ==="
+
+# 1️⃣ GET initial
+echo
+echo ">>> GET /api/todos (initial)"
+curl -s -X GET http://localhost:3000/api/todos
+echo -e "\n"
+
+# 2️⃣ POST : créer des tâches
+echo ">>> POST /api/todos : 'Apprendre Node'"
+curl -s -X POST http://localhost:3000/api/todos -H "Content-Type: application/json" -d '{"title":"Apprendre Node"}'
+echo -e "\n"
+
+echo ">>> POST /api/todos : 'Faire les courses'"
+curl -s -X POST http://localhost:3000/api/todos -H "Content-Type: application/json" -d '{"title":"Faire les courses"}'
+echo -e "\n"
+
+echo ">>> POST /api/todos : 'Lire un livre'"
+curl -s -X POST http://localhost:3000/api/todos -H "Content-Type: application/json" -d '{"title":"Lire un livre"}'
+echo -e "\n"
+
+# 3️⃣ Tester la règle métier (titre vide)
+echo ">>> POST /api/todos : titre vide (doit échouer)"
+curl -s -X POST http://localhost:3000/api/todos -H "Content-Type: application/json" -d '{"title":""}'
+echo -e "\n"
+
+# 4️⃣ GET final
+echo ">>> GET /api/todos (final)"
+curl -s -X GET http://localhost:3000/api/todos
+echo -e "\n"
+
+echo "=== Fin du test ==="
+```
+
+---
+
+### **Comment l’utiliser**
+
+1. Crée un fichier `script-test-todo-windows.sh` à la racine de ton projet
+2. Copie-colle le contenu ci-dessus
+3. Lance ton serveur :
+
+```bash
+npm run dev
+```
+
+4. Dans un autre terminal Git Bash, lance le script :
+
+```bash
+bash script-test-todo-windows.sh
+```
+
+* Toutes les requêtes GET et POST seront exécutées
+* Les réponses JSON s’afficheront directement dans le terminal
+* Tu verras la création des tâches et la vérification de la règle métier
+
+---
