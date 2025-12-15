@@ -1,7 +1,8 @@
 class TodoModel {
   // tableau en mémoire
   static todos = [
-    { id: 1, title: "Faire les courses", completed: false }
+    { id: 1, title: "Faire les courses", completed: false },
+    { id: 2, title: "Apprendre Node.js", completed: false }
   ];
 
   // retourne toutes les tâches
