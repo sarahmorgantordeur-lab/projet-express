@@ -1,19 +1,16 @@
-const TodoService = require('../services/todo.service');
+const todoService = require('../services/todo.service');
 const asyncHandler = require('../utils/asyncHandler');
 
-// Récupérer toutes les tâches
-exports.getAll = asyncHandler(async (req, res) => {
-    const todos = await TodoService.getAllTodos();
-    res.json(todos);
-});
+const todoController = {
+    getAllTodos: asyncHandler(async (req, res) => {
+        const todos = await todoService.findAll();
+        res.status(200).json(todos);
+    }),
 
-// Créer une nouvelle tâche
-exports.create = asyncHandler(async (req, res) => {
-    const newTodo = await TodoService.createTodo(req.body);
+    createTodo: asyncHandler(async (req, res) => {
+        const createdTodo = await todoService.create(req.body);
+        res.status(201).json(createdTodo);
+    })
+};
 
-    if (!newTodo) {
-        return res.status(400).json({ error: 'Le titre de la tâche est obligatoire' });
-    }
-
-    res.status(201).json(newTodo);
-});
+module.exports = todoController;
