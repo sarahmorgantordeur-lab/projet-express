@@ -11,6 +11,6 @@ AppDataSource.initialize()
   })
 
   .catch((error) =>  {
-    ErrorHandler.handleError(error),
+    console.error("Erreur lors de l'initialisation de la source de données :", error);
     process.exit(1)
     });

@@ -17,13 +17,15 @@ class TodoService {
     // Créer une tâche avec règle métier (on met jrs dans le service !!)
     static async createTodo(todo) {
         const user = await this.findById(todo.userId);
+        const tags = await tagService.findbyIds(todo.tagsIds);
         if (!user) {
             throw new Error('User not found');
         }
         const newTodo = this.repository.create({
             title: todo.title,
             description: todo.description,
-            user: user
+            user: user,
+            tag: todo.tags,
         }); 
         return await this.repository.save(newTodo);
     }

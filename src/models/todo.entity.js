@@ -8,7 +8,9 @@ module.exports = new EntitySchema({
         type: 'int',
         generated: true },
     title: { type : 'varchar' },
-    completed: { type: "boolean", default: false}
+    completed: { 
+        type: "boolean", 
+        default: false}
     },
     relations: { 
         user: {
@@ -17,5 +19,10 @@ module.exports = new EntitySchema({
             joinColumn: true,
             inverseSide: "todos",
         },
+        tags: {
+            type: "many-to-many",
+            target: "Tag",
+            inverseSide: "todos",
+        }
     },
 });
