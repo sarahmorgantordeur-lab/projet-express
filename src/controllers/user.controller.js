@@ -11,7 +11,13 @@ const UserController = {
     createUser: asyncHandler(async (req, res) => {
         const newUser = await userService.createUser(req.body);
         res.status(201).json(newUser);
-    })
+    }),
+
+    findById: asyncHandler(async (req, res) => {
+        const user = await userService.findById(parseInt(req.params.id, 10));  
+        res.status(200).json(user);   
+}),
+
 };
 
 module.exports = UserController;

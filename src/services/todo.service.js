@@ -1,21 +1,36 @@
-const TodoModel = require('../models/todo.model');
+const AppDataSource = require('../config/data-source');
 
 class TodoService {
-
-  // récupérer toutes les tâches
-  static async getAllTodos() {
-    return await TodoModel.findAll();
-  }
-
-  // Créer une tâche avec règle métier (on met jrs dans le service !!)
-  static async createTodo(todo) {
-    // Règle métier : titre obligatoire
-    if (!todo || !todo.title || todo.title.trim() === '') {
-      return null; // ou throw new Error("Titre requis");
+    static get repository() {
+        return AppDataSource.getRepository('Todo');
+    }
+    
+    static get userRepository() {
+        return AppDataSource.getRepository('User');
     }
 
-    return await TodoModel.create(todo);
-  }
+    // récupérer toutes les users
+    static async getAllTodos() {
+        return await this.repository.find({ relations: ["user"] });
+    }
+
+    // Créer une tâche avec règle métier (on met jrs dans le service !!)
+    static async createTodo(todo) {
+        const user = await this.findById(todo.userId);
+        if (!user) {
+            throw new Error('User not found');
+        }
+        const newTodo = this.repository.create({
+            title: todo.title,
+            description: todo.description,
+            user: user
+        }); 
+        return await this.repository.save(newTodo);
+    }
+
+    static async findById(id) {
+        return await this.repository.findOneBy({ id });
+    }
 }
 
 module.exports = TodoService;

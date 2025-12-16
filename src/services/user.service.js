@@ -7,7 +7,7 @@ class UserService {
 
     // récupérer toutes les users
     static async getAllUsers() {
-        return await this.repository.find();
+        return await this.repository.find( { relations: ["todos"] });
     }
 
     // Créer une tâche avec règle métier (on met jrs dans le service !!)
@@ -17,7 +17,7 @@ class UserService {
     }
 
     static async findById(id) {
-        return await this.repository.findOneBy({ id });
+        return await this.repository.findOne({ where : { id }, relations : ["todos"] });
     }
 }
 

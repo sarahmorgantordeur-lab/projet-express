@@ -3,12 +3,12 @@ const asyncHandler = require('../utils/asyncHandler');
 
 const todoController = {
     getAllTodos: asyncHandler(async (req, res) => {
-        const todos = await todoService.findAll();
+        const todos = await todoService.getAllTodos();
         res.status(200).json(todos);
     }),
 
     createTodo: asyncHandler(async (req, res) => {
-        const createdTodo = await todoService.create(req.body);
+        const createdTodo = await todoService.createTodo(req.body);
         res.status(201).json(createdTodo);
     })
 };

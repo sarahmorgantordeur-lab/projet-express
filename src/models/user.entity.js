@@ -3,14 +3,21 @@ module.exports = new EntitySchema({
     name: "User",
     tableName: "users",
     columns: {
-    id: { primary: true,
+    id: { 
+        primary: true,
         type : 'int',
         generated: true },
-    name: { type : 'varchar',
-    },
+    name: { type : 'varchar' },
     email: {
         type: "varchar",
-        unique: true
-    }
-    }
+        unique: true }
+    },
+    relations : {
+        todos : {
+            type: "one-to-many",
+            target : "Todo",
+            inverseSide: "user",
+            cascade: true,
+        },
+    },
 });

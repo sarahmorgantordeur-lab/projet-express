@@ -5,6 +5,8 @@ const UserController = require('../controllers/user.controller');
 // GET -> récupérer toutes les tâches
 router.get('/', UserController.getAllUsers);
 
+router.get('/:id', UserController.findById);
+
 // POST -> créer une nouvelle tâche
 router.post('/', UserController.createUser);
 
