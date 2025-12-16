@@ -1,4 +1,3 @@
-const reflect_metadata = require("reflect-metadata");
 const app = require("./app");
 const PORT = process.env.PORT || 3000;
 const AppDataSource = require("./config/data-source");

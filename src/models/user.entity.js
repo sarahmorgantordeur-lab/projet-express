@@ -6,10 +6,11 @@ module.exports = new EntitySchema({
     id: { primary: true,
         type : 'int',
         generated: true },
-    name: { type : 'varchar'},
+    name: { type : 'varchar',
     },
     email: {
         type: "varchar",
         unique: true
     }
-  });
+    }
+});

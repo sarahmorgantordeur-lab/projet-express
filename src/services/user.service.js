@@ -1,22 +1,24 @@
 const AppDataSource = require('../config/data-source');
 
 class UserService {
-
-  // récupérer toutes les tâches
-  static async getAllUsers() {
-            console.log('coucou')
-    return await AppDataSource.findAll();
-  }
-
-  // Créer une tâche avec règle métier (on met jrs dans le service !!)
-  static async createUser(user) {
-    // Règle métier : nom obligatoire
-    if (!user || !user.name || user.name.trim() === '') {
-      return null; // ou throw new Error("Nom requis");
+    static get repository() {
+        return AppDataSource.getRepository('User');
     }
 
-    return await AppDataSource.create(user);
-  }
+    // récupérer toutes les users
+    static async getAllUsers() {
+        return await this.repository.find();
+    }
+
+    // Créer une tâche avec règle métier (on met jrs dans le service !!)
+    static async createUser(user) {
+        const newUser = this.repository.create(user); 
+        return await this.repository.save(newUser);
+    }
+
+    static async findById(id) {
+        return await this.repository.findOneBy({ id });
+    }
 }
 
 module.exports = UserService;

@@ -7,6 +7,6 @@ router.get('/', UserController.getAllUsers);
 
 // POST -> créer une nouvelle tâche
 router.post('/', UserController.createUser);
-console.log('coucou')
+
 
 module.exports = router;

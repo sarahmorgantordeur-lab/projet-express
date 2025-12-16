@@ -3,14 +3,14 @@ const asyncHandler = require('../utils/asyncHandler');
 
 const UserController = {
     getAllUsers: asyncHandler(async (req, res) => {
-        console.log('coucou')
-        const users = await userService.findAll();
+
+        const users = await userService.getAllUsers();
         res.status(200).json(users);
     }),
 
     createUser: asyncHandler(async (req, res) => {
-        const createdUser = await userService.create(req.body);
-        res.status(201).json(createdUser);
+        const newUser = await userService.createUser(req.body);
+        res.status(201).json(newUser);
     })
 };
 
