@@ -2,6 +2,7 @@ const bcrypt = require('bcrypt');
 const jsonwetoken = require('jsonwebtoken');
 const AppDataSource = require('../config/data-source');
 const User = require('../models/user.entity');
+const { options } = require('../app');
 
 
 
@@ -34,4 +35,75 @@ const register = async (req, res) => {
         console.error(error); 
         res.status(500).json({ message: "Server error" }); 
     } 
+};
+
+
+
+// ========================================================
+// 2. Fonction de login appelée après que le Passport Local ait vérifié le mot de passe
+// ========================================================
+
+const login = async (req, res) => { 
+    // 1. Récupérer l'user validé par Passport 
+    // INDICE : Il est disponible dans req.user 
+    const user = req.user; 
+    
+    // 2. Préparer le Payload (les infos à mettre dans le token) 
+    // -> id, email, role 
+    const Payload = {
+        id: user.id,
+        email: user.email,
+        role: user.role
+    }
+
+    // 3. Générer l'ACCESS Token (Court terme : 15 min) 
+    // -> Utiliser jwt.sign(payload, secret, options) 
+    const AccessToken = jwt.sign(Payload, ServerClosedEvent, { expiresIn: '15m' });
+     
+    // 4. Générer le REFRESH Token (Long terme : 7 jours) 
+    // -> Utiliser jwt.sign(payload, secret, options) 
+    const RefreshToken = jwt.sign(Payload, ServerClosedEvent, { expiresIn: '7d' });
+    
+    // 5. Renvoyer les deux tokens au client (JSON) 
+    res.json({
+        access_token: AccessToken,
+        refresh_token: RefreshToken
+    });
+};
+
+
+// ========================================================
+// 2. Rafraichissement : vérifier que le RefreshToken est valide et redonner un Acesstoken neuf
+// ========================================================
+
+const refresh = async (req, res) => { 
+    // 1. Récupérer le refreshToken depuis le body 
+    // -> Si pas de token : erreur 401 
+    const { refreshToken } = req.body;
+    if (!refreshToken) {
+        return res.status(401);
+    }
+    
+    // 2. Vérifier le token (jwt.verify) 
+    // -> Premier argument : le token 
+    // -> Deuxième argument : le secret 
+    // -> Troisième argument : le callback (err, decodedUser) 
+    jwt.verify(refreshToken, process.env.JWT_SECRET, (err, user) => { 
+        // 3. Si erreur (token invalide ou expiré) : erreur 403
+        if (err) {
+            return res.status(403);
+        }
+        // 4. Si tout est bon : 
+        // -> Re-créer un payload propre (id, email, role) depuis l'objet 'user' décodé 
+        // -> Signer un NOUVEL accessToken (15m) 
+        const newPayload = {
+            id: user.id,
+            email: user.email,
+            role: user.role
+        };
+        const newAccessToken = jwt.sign(newPayload, process.env.JWT_SECRET, { expiresIn: '15m' });
+        
+        // 5. Renvoyer l'accessToken (JSON) 
+        res.json({ access_token: newAccessToken });
+    }); 
 };
