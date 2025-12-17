@@ -17,6 +17,10 @@ const UserController = {
         const user = await userService.findById(parseInt(req.params.id, 10));  
         res.status(200).json(user);   
 }),
+    delete_user: asyncHandler(async (req, res) => {
+        await userService.delete_user(parseInt(req.params.id, 10));  
+        res.status(204).send();   
+    }),
 
 };
 

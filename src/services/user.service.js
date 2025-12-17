@@ -19,6 +19,10 @@ class UserService {
     static async findById(id) {
         return await this.repository.findOne({ where : { id }, relations : ["todos"] });
     }
+
+    static async delete_user(id) {
+        return await this.repository.delete(id);
+    }
 }
 
 module.exports = UserService;

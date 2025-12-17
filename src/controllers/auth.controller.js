@@ -6,10 +6,11 @@ const { options } = require('../app');
 
 
 
-const register = async (req, res) => { 
+const register = async (req, res) => {
+    console.log("req.body:", req.body); 
     try { 
         // 1. Récupérer email, password, role depuis req.body 
-        const { email, password, role } = req.body;
+        const { name, email, password, role } = req.body;
         // 2. Vérifier si l'utilisateur existe déjà (findOneBy email) 
         const Repository = AppDataSource.getRepository(User);
         const existingUser = await Repository.findOneBy({ email: email });
@@ -22,6 +23,7 @@ const register = async (req, res) => {
 
         // 4. Créer l'instance de l'utilisateur (Repository.create) 
         const newUser = Repository.create({
+            name: name,
             email: email,
             password: hashedPassword,  // -> Attention à mettre le mot de passe HACHÉ 
             role: role || 'USER'      // -> Si le rôle n'est pas fourni, forcer 'USER' par défaut
@@ -76,7 +78,7 @@ const login = async (req, res) => {
 // 2. Rafraichissement : vérifier que le RefreshToken est valide et redonner un Acesstoken neuf
 // ========================================================
 
-const refresh = async (req, res) => { 
+const refreshToken = async (req, res) => { 
     // 1. Récupérer le refreshToken depuis le body 
     // -> Si pas de token : erreur 401 
     const { refreshToken } = req.body;
@@ -89,21 +91,27 @@ const refresh = async (req, res) => {
     // -> Deuxième argument : le secret 
     // -> Troisième argument : le callback (err, decodedUser) 
     jwt.verify(refreshToken, process.env.JWT_SECRET, (err, user) => { 
+
         // 3. Si erreur (token invalide ou expiré) : erreur 403
         if (err) {
             return res.status(403);
-        }
-        // 4. Si tout est bon : 
-        // -> Re-créer un payload propre (id, email, role) depuis l'objet 'user' décodé 
-        // -> Signer un NOUVEL accessToken (15m) 
-        const newPayload = {
-            id: user.id,
-            email: user.email,
-            role: user.role
-        };
-        const newAccessToken = jwt.sign(newPayload, process.env.JWT_SECRET, { expiresIn: '15m' });
+        } else {
+            // 4. Si tout est bon : 
+            const newPayload = {
+                id: user.id,
+                email: user.email,
+                role: user.role
+            }; // -> Re-créer un payload propre (id, email, role) depuis l'objet 'user' décodé 
+            const newAccessToken = jwt.sign(newPayload, process.env.JWT_SECRET, { expiresIn: '15m' }); // -> Signer un NOUVEL accessToken (15m) 
         
-        // 5. Renvoyer l'accessToken (JSON) 
-        res.json({ access_token: newAccessToken });
+            // 5. Renvoyer l'accessToken (JSON) 
+            res.json({ access_token: newAccessToken });
+            }
     }); 
+};
+
+module.exports = {
+    register,
+    login,
+    refreshToken
 };

@@ -7,4 +7,6 @@ router.post('/register', authController.register);
 
 router.post('/login', passport.authenticate('local', { session: false }), authController.login);
 
+router.post('/refresh', authController.refreshToken);
+
 module.exports = router;

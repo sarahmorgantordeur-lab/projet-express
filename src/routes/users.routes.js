@@ -10,5 +10,7 @@ router.get('/:id', UserController.findById);
 // POST -> créer une nouvelle tâche
 router.post('/', UserController.createUser);
 
+router.delete('/:id', UserController.delete_user);
+
 
 module.exports = router;
