@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Hacker Board</title>
+</head>
+<body>
+
+  <h1>Messages</h1>
+
+  <form id="msgForm">
+    <input type="text" id="content" placeholder="Votre message">
+    <button type="submit">Envoyer</button>
+  </form>
+
+  <ul id="messages"></ul>
+
+  <script>
+    const form = document.getElementById('msgForm');
+    const list = document.getElementById('messages');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const content = document.getElementById('content').value;
+
+      await fetch('http://localhost:3000/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content })
+      });
+
+      loadMessages();
+    });
+
+    async function loadMessages() {
+      const res = await fetch('http://localhost:3000/messages');
+      const messages = await res.json();
+
+      list.innerHTML = '';
+
+      messages.forEach(msg => {
+        const li = document.createElement('li');
+
+        // 🔒 AFFICHAGE SÉCURISÉ
+        li.textContent = msg.content;
+
+        list.appendChild(li);
+      });
+    }
+
+    loadMessages();
+  </script>
+
+</body>
+</html>
