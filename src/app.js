@@ -1,5 +1,5 @@
+require('dotenv').config();
 require('reflect-metadata');
-// require('dotenv').config();
 
 const express = require('express');
 const helmet = require('helmet');
@@ -9,7 +9,35 @@ const passport = require('passport');
 const logger = require('./middlewares/logger.middleware');
 const errorHandler = require('./errors/errorHandler');
 
+// ... Imports existants (express, passport, etc.)
+const session = require('express-session');
+const { RedisStore } = require('connect-redis');
+const redis = require('./config/redis');// Notre fichier de config
+
+// Lancement de la conexion Redis
+require('./config/redis');
+
 const app = express();
+// Paser JSON
+app.use(express.json());
+
+// --- CONFIGURATION DE LA SESSION REDIS ---
+app.use(session({
+    // On remplace le store par défaut (Memory) par Redis
+    store: new RedisStore({
+        client: redis,
+        prefix: "sess:", // Préfixe des clés dans Redis
+    }),
+    secret: 'votre_secret_super_securise',
+    resave: false,
+    saveUninitialized: false, //A changer, true c'est pour le test
+    cookie: {
+        secure: false, // false en HTTP (localhost)
+        httpOnly: true, // Sécurité contre XSS
+        maxAge: 86400*1000 //24 heures
+    }
+}));
+
 
 //--- SECURITE ---
 app.use(helmet()); //masque les technologie et ajoute les headers de sécurité
@@ -45,10 +73,6 @@ app.use(cors(corsOptions));
 // Limiteur global
 app.use(globalLimiter);
 
-// Paser JSON
-app.use(express.json());
-
-
 // Sanitizer contre les attaques XSS
 app.use(sanitizer);
 
@@ -57,12 +81,13 @@ app.use(sanitizer);
 app.use(hpp());
 
 app.use(logger);
-// Initialiser passport 
+
+// --- PASSPORT ---
 app.use(passport.initialize());
+app.use(passport.session());
 require ('./config/passport')(passport);
 
-// Routes
-
+// --- ROUTES ---
 const todoRoutes = require('./routes/todo.routes');
 const userRoutes = require('./routes/users.routes');
 const tagRoutes = require('./routes/tag.routes');
@@ -71,10 +96,17 @@ const authRoutes = require('./routes/auth.routes');
 
 app.get('/messages', (req, res) => res.json(messages));
 app.post('/messages', (req, res) => {
-    // Faille : On stocke directement ce qu'on reçoit sans nettoyer
+    // Écriture dans la session pour forcer la création
+    req.session.lastMessage = new Date().toISOString();
+    
     const { content } = req.body;
     messages.push({ content, date: new Date() });
-    res.json({ status: 'success' });
+    
+    res.json({ 
+        status: 'success',
+        sessionId: req.sessionID,       // tu peux voir l'ID de session
+        lastMessage: req.session.lastMessage
+    });
 });
 
 

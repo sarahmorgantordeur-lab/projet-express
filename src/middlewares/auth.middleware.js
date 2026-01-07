@@ -1,7 +1,7 @@
 const passport = require('passport');
 
 // On demande à Passport d'utiliser la stratégie 'jwt' sans session cookie 
-const requireAuth = passport.authenticate('jwt', { session: false });
+const requireAuth = passport.authenticate('jwt', { session: true });
 
 //Le filtre rôle pour vérifier si admin ou user
 const requireRole = (role) => { 

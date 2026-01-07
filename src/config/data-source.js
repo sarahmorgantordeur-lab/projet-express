@@ -7,7 +7,7 @@ const AppDataSource = new DataSource({
   type: "sqlite",
   database: "database.sqlite",
   synchronize: true, // ⚠️ à désactiver en production
-  logging: true,
+  logging: false,
   entities: [UserSchema, TodoSchema, TagSchema],
 //   migrations: [],
 //   subscribers: [],

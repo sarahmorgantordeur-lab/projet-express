@@ -1,0 +1,47 @@
+services:
+  # 1. APPLICATION NODE.JS
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      # Config Redis (Liaison avec le service ci-dessous)
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - redis
+    networks:
+      - app-network
+    volumes:
+      - .:/app # Synchronisation du code
+      - /app/node_modules # Evite d'écraser les modules du conteneur
+
+  # 2. REDIS (Cache Rapide)
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data # Persistance des données Redis (optionnel pour le TP, util en PROD)
+    networks:
+      - app-network
+
+  # 3. REDIS COMMANDER (Interface Graphique)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  redis_data:
+  node_modules:

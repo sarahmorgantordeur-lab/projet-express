@@ -49,6 +49,19 @@ const login = async (req, res) => {
     try {
     const { email, password } = req.body; 
     const foundUser = await Repository.findOneBy({ email: email });
+    req.session.userId = foundUser.id;
+
+    console.log("Tentative de sauvegarde...");
+    req.session.save((err) => {
+        if (err) {
+            console.error("CRASH REDIS SESSION :", err);
+        } else {
+            console.log("Succès ! Session ID:", req.sessionID);
+        }
+    });
+    console.log("Session userId:", req.session.userId);
+    res.json({ status: "ok" });
+    
 
     if (!foundUser) {
         return res.status(401).json({ message: "Utilisateur non trouvé." });
@@ -67,7 +80,7 @@ const login = async (req, res) => {
         id: foundUser.id,
         name: foundUser.name,
         email: foundUser.email,
-        role: foundUser.role
+        role: foundUser.rolerue
     };
 
     // 3. Générer l'ACCESS Token (Court terme : 15 min) 
@@ -90,11 +103,22 @@ const login = async (req, res) => {
       process.env.REFRESH_JWT_SECRET || "123456",
       { expiresIn: "7d" }
     );
+
+
+    // --- SESSION REDIS ---
+    req.session.test = "ça marche ?";
+    req.session.save(); // Force l'écriture
+    req.session.userId = foundUser.id;
+    req.session.role = foundUser.role;
+    req.session.save(err => {
+        if (err) console.error(err);
     
-    // 5. Renvoyer les deux tokens au client (JSON) 
-    res.json({
-        AccessToken, RefreshToken
+        // 5. Renvoyer les deux tokens au client (JSON) 
+        res.json({
+            AccessToken, RefreshToken
+        });
     });
+
     } catch (error) { 
         console.error(error); 
         res.status(500).json({ message: "Server error" }); 
