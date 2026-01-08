@@ -11,9 +11,9 @@ module.exports = (passport) => {
     // 1. STRATÉGIE LOCALE (Sert uniquement au Login) 
     // =====================================================
     passport.use(
-        new LocalStrategy({ 
-            usernameField: 'email', // Indiquez à Passport quel champ sert d'identifiant 
-            session: false // Désactivez les sessions (car on fait une API REST) 
+        new LocalStrategy({
+            usernameField: 'email', // Indiquez à Passport quel champ sert d'identifiant
+            session: true // Activez les sessions pour WebSocket
         },
 
         async (email, password, done) => {
@@ -42,7 +42,7 @@ module.exports = (passport) => {
 
     passport.use(
         new JwtStrategy(jwtOptions, async (payload, done) => {
-            
+
             try {
                 const userRepository = AppDataSource.getRepository('User');
                 const user = await userRepository.findOneBy({ id: payload.id });
@@ -54,7 +54,18 @@ module.exports = (passport) => {
                 }
             } catch (error) {
                 return done(error, false);
-            }   
+            }
         })
     );
+
+    // =====================================================
+    // 3. SÉRIALISATION DE L'UTILISATEUR POUR LES SESSIONS
+    // =====================================================
+    passport.serializeUser((user, done) => {
+        done(null, { id: user.id, name: user.name, email: user.email, loggedIn: true });
+    });
+
+    passport.deserializeUser(async (sessionUser, done) => {
+        done(null, sessionUser);
+    });
 };

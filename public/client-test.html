@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Test Socket.IO</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+        }
+
+        .log {
+            background: #f4f4f4;
+            border: 1px solid #ddd;
+            padding: 10px;
+            height: 300px;
+            overflow-y: scroll;
+        }
+
+        .chat-container {
+            background: #fff;
+            border: 2px solid #4CAF50;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            max-width: 600px;
+        }
+
+        .chat-messages {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 10px;
+            height: 400px;
+            overflow-y: scroll;
+            margin-bottom: 10px;
+        }
+
+        .message {
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 5px;
+            background: #e3f2fd;
+        }
+
+        .message-from {
+            font-weight: bold;
+            color: #1976d2;
+        }
+
+        .message-time {
+            font-size: 0.8em;
+            color: #666;
+            margin-left: 10px;
+        }
+
+        .chat-input-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .send-btn {
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .send-btn:hover {
+            background: #45a049;
+        }
+
+        input {
+            margin: 5px;
+            padding: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Console Client Socket.IO</h1>
+
+    <div id="login-form">
+        <h2>Connexion</h2>
+        <input type="email" id="email" placeholder="Email" value="bonjour@bonjour.com">
+        <input type="password" id="password" placeholder="Password" value="testtest32">
+        <button onclick="login()">Se connecter</button>
+    </div>
+
+    <div id="app" style="display:none;">
+        <h2>Logs système</h2>
+        <div id="logs" class="log"></div>
+
+        <div class="chat-container">
+            <h2>💬 Chat General</h2>
+            <div id="chat-messages" class="chat-messages"></div>
+            <div class="chat-input-container">
+                <input type="text" id="chat-input" class="chat-input" placeholder="Tapez votre message..." onkeypress="handleKeyPress(event)">
+                <button onclick="sendChat()" class="send-btn">Envoyer</button>
+            </div>
+        </div>
+
+        <button onclick="sendPing()" style="margin-top: 20px;">Envoyer PING (test)</button>
+    </div>
+
+    <script>
+        let socket;
+        const logDiv = document.getElementById('logs');
+        const chatMessagesDiv = document.getElementById('chat-messages');
+        const chatInput = document.getElementById('chat-input');
+
+        function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            fetch('http://localhost:3000/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ email, password })
+            })
+            .then(r => r.json())
+            .then(data => {
+                console.log('Connecté:', data);
+                document.getElementById('login-form').style.display = 'none';
+                document.getElementById('app').style.display = 'block';
+                connectSocket();
+            })
+            .catch(err => {
+                alert('Erreur de connexion: ' + err.message);
+            });
+        }
+
+        function connectSocket() {
+            socket = io('http://localhost:3000', { withCredentials: true });
+
+            socket.on('connect', () => {
+                addLog(`Connecté au serveur avec l'ID : ${socket.id}`);
+            });
+
+            socket.on('disconnect', () => {
+                addLog('Déconnecté du serveur');
+            });
+
+            socket.on('connect_error', (error) => {
+                addLog(`Erreur de connexion: ${error.message}`);
+            });
+
+            socket.on('my_pong', (data) => {
+                addLog(`Réponse reçue du serveur : ${data.message}`);
+            });
+
+            socket.on('broadcast_msg', (data) => {
+                addLog(`Message broadcast reçu : ${data.message}`);
+            });
+
+            // Écoute des messages du Chat
+            socket.on('new_message', (data) => {
+                addChatMessage(data.from, data.message, data.time);
+            });
+
+            // Écoute des notifications privées
+            socket.on('notification', (data) => {
+                addLog(`🔔 [PRIVÉ] ${data.from} : ${data.text}`);
+                alert(`Notification reçue : ${data.text}`); // Pour bien la voir !
+            });
+        }
+
+        function addLog(message) {
+            const p = document.createElement('p');
+            p.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logDiv.appendChild(p);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function addChatMessage(from, message, time) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message';
+            messageDiv.innerHTML = `
+                <span class="message-from">${from}</span>
+                <span class="message-time">${time || new Date().toLocaleTimeString()}</span>
+                <div>${message}</div>
+            `;
+            chatMessagesDiv.appendChild(messageDiv);
+            chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
+        }
+
+        function sendPing() {
+            addLog('Envoi de "ping"...');
+            socket.emit('my_ping', { text: 'Hello Server!' });
+        }
+
+        // Fonction pour envoyer un message dans le chat
+        function sendChat() {
+            const text = chatInput.value.trim();
+            if (text) {
+                socket.emit('chat_message', { message: text });
+                chatInput.value = '';
+                chatInput.focus();
+            }
+        }
+
+        // Permet d'envoyer avec la touche Entrée
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendChat();
+            }
+        }
+    </script>
+</body>
+
+</html>

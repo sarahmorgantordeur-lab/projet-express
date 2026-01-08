@@ -1,71 +1,105 @@
-require('dotenv').config();
-require('reflect-metadata');
+require("dotenv").config();
+require("reflect-metadata");
 
-const express = require('express');
-const helmet = require('helmet');
-const { globalLimiter } = require('./middlewares/rateLimiter');
-const hpp = require('hpp');
-const passport = require('passport');
-const logger = require('./middlewares/logger.middleware');
-const errorHandler = require('./errors/errorHandler');
+const express = require("express");
+const http = require("http");
+const helmet = require("helmet");
+const { globalLimiter } = require("./middlewares/rateLimiter");
+const hpp = require("hpp");
+const passport = require("passport");
+const logger = require("./middlewares/logger.middleware");
+const errorHandler = require("./errors/errorHandler");
 
 // ... Imports existants (express, passport, etc.)
-const session = require('express-session');
-const { RedisStore } = require('connect-redis');
-const redis = require('./config/redis');// Notre fichier de config
+const session = require("express-session");
+const { RedisStore } = require("connect-redis");
+const redis = require("./config/redis"); // Notre fichier de config
 
 // Lancement de la conexion Redis
-require('./config/redis');
+require("./config/redis");
 
 const app = express();
+const httpServer = http.createServer(app);
+
 // Paser JSON
 app.use(express.json());
+app.use(express.static("public"));
 
 // --- CONFIGURATION DE LA SESSION REDIS ---
-app.use(session({
-    // On remplace le store par défaut (Memory) par Redis
-    store: new RedisStore({
-        client: redis,
-        prefix: "sess:", // Préfixe des clés dans Redis
-    }),
-    secret: 'votre_secret_super_securise',
-    resave: false,
-    saveUninitialized: false, //A changer, true c'est pour le test
-    cookie: {
-        secure: false, // false en HTTP (localhost)
-        httpOnly: true, // Sécurité contre XSS
-        maxAge: 86400*1000 //24 heures
-    }
-}));
+// app.use(session({
+//     // On remplace le store par défaut (Memory) par Redis
+//     store: new RedisStore({
+//         client: redis,
+//         prefix: "sess:", // Préfixe des clés dans Redis
+//     }),
+//     secret: 'votre_secret_super_securise',
+//     resave: false,
+//     saveUninitialized: false, //A changer, true c'est pour le test
+//     cookie: {
+//         secure: false, // false en HTTP (localhost)
+//         httpOnly: true, // Sécurité contre XSS
+//         maxAge: 86400*1000 //24 heures
+//     }
+// }));
 
+const sessionMiddleware = session({
+  store: new RedisStore({ client: redis }),
+  secret: "votre_secret_super_securise",
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: false,
+    httpOnly: true,
+    maxAge: 86400 * 1000,
+  },
+});
+
+app.use(sessionMiddleware);
+
+const wrap = (middleware) => (socket, next) =>
+  middleware(socket.request, {}, next);
 
 //--- SECURITE ---
-app.use(helmet()); //masque les technologie et ajoute les headers de sécurité
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.socket.io"],
+        connectSrc: ["'self'", "ws://localhost:3000", "http://localhost:3000"],
+      },
+    },
+  })
+);
 
-const cors = require('cors');
+const cors = require("cors");
 
 //liste des domaines utilisés
-const whitelist = [ 'http://localhost:4200', 'http://localhost:3000', 'http://localhost:5500' ];
+const whitelist = [
+  "http://localhost:4200",
+  "http://localhost:3000",
+  "http://localhost:5500",
+];
 const corsOptions = {
-    origin: function(origin, callback) {
-        if (
-            whitelist.includes(origin) ||
-            origin === 'null' ||   // ← pour file://
-            !origin  // !origin signifie requête server à server (Postman, curl) 
-            ) { 
-                callback(null, true);      
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
-    methods: ['GET', 'POST', 'PUT'], // verbes autorisés
-    allowedHeaders: ['Content-Type', 'Authorization'] // headers autorisés
+  origin: function (origin, callback) {
+    if (
+      whitelist.includes(origin) ||
+      origin === "null" || // ← pour file://
+      !origin // !origin signifie requête server à server (Postman, curl)
+    ) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  methods: ["GET", "POST", "PUT"], // verbes autorisés
+  allowedHeaders: ["Content-Type", "Authorization"], // headers autorisés
 };
 
 // Stockage temporaire en mémoire (pour la démo)
 const messages = [];
 
-const sanitizer = require('./middlewares/sanitizer');
+const sanitizer = require("./middlewares/sanitizer");
 
 // Activer CORS avec les options définies (application du middleware)
 app.use(cors(corsOptions));
@@ -85,39 +119,39 @@ app.use(logger);
 // --- PASSPORT ---
 app.use(passport.initialize());
 app.use(passport.session());
-require ('./config/passport')(passport);
+require("./config/passport")(passport);
 
 // --- ROUTES ---
-const todoRoutes = require('./routes/todo.routes');
-const userRoutes = require('./routes/users.routes');
-const tagRoutes = require('./routes/tag.routes');
-const authRoutes = require('./routes/auth.routes');
-const statsRoutes = require('./routes/stats.routes');
+const todoRoutes = require("./routes/todo.routes");
+const userRoutes = require("./routes/users.routes");
+const tagRoutes = require("./routes/tag.routes");
+const authRoutes = require("./routes/auth.routes");
+const statsRoutes = require("./routes/stats.routes");
 
+app.get("/", (req, res) => res.send("Server HTTP OK"));
+app.get("/messages", (req, res) => res.json(messages));
+app.post("/messages", (req, res) => {
+  // Écriture dans la session pour forcer la création
+  req.session.lastMessage = new Date().toISOString();
 
-app.get('/messages', (req, res) => res.json(messages));
-app.post('/messages', (req, res) => {
-    // Écriture dans la session pour forcer la création
-    req.session.lastMessage = new Date().toISOString();
-    
-    const { content } = req.body;
-    messages.push({ content, date: new Date() });
-    
-    res.json({ 
-        status: 'success',
-        sessionId: req.sessionID,       // tu peux voir l'ID de session
-        lastMessage: req.session.lastMessage
-    });
+  const { content } = req.body;
+  messages.push({ content, date: new Date() });
+
+  res.json({
+    status: "success",
+    sessionId: req.sessionID, // tu peux voir l'ID de session
+    lastMessage: req.session.lastMessage,
+  });
 });
 
 
-app.use('/api/todos', todoRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/tags', tagRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api', statsRoutes);
 
+app.use("/api/todos", todoRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/tags", tagRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api", statsRoutes);
 
 app.use(errorHandler);
 
-module.exports = app;
+module.exports = { app, httpServer, sessionMiddleware, wrap };

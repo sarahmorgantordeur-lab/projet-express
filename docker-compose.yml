@@ -13,8 +13,11 @@ services:
     networks:
       - app-network
     volumes:
-      - .:/app # Synchronisation du code
-      - /app/node_modules # Evite d'écraser les modules du conteneur
+      - ./src:/app/src # Synchronisation uniquement du code source
+      - ./public:/app/public # Synchronisation du dossier public
+      - ./package.json:/app/package.json # Pour voir les changements de dépendances
+      - ./package-lock.json:/app/package-lock.json
+      # node_modules reste dans le conteneur (compilé pour Linux)
 
   # 2. REDIS (Cache Rapide)
   redis:
