@@ -11,6 +11,7 @@ const errorHandler = require('./errors/errorHandler');
 
 // ... Imports existants (express, passport, etc.)
 const session = require('express-session');
+const { RedisStore } = require('connect-redis');
 const redis = require('./config/redis');// Notre fichier de config
 
 // Lancement de la conexion Redis
