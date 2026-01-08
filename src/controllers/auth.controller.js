@@ -43,85 +43,74 @@ const register = async (req, res) => {
 // 2. Fonction de login appelée après que le Passport Local ait vérifié le mot de passe
 // ========================================================
 
-const login = async (req, res) => { 
-    // 1. Récupérer l'user validé par Passport 
-    // INDICE : Il est disponible dans req.user 
+const login = async (req, res) => {
     try {
-    const { email, password } = req.body; 
-    const foundUser = await Repository.findOneBy({ email: email });
-    req.session.userId = foundUser.id;
+        const { email, password } = req.body;
+        const foundUser = await Repository.findOneBy({ email: email });
 
-    console.log("Tentative de sauvegarde...");
-    req.session.save((err) => {
-        if (err) {
-            console.error("CRASH REDIS SESSION :", err);
-        } else {
-            console.log("Succès ! Session ID:", req.sessionID);
+        // Vérifier si l'utilisateur existe
+        if (!foundUser) {
+            return res.status(401).json({ message: "Utilisateur non trouvé." });
         }
-    });
-    console.log("Session userId:", req.session.userId);
-    res.json({ status: "ok" });
-    
 
-    if (!foundUser) {
-        return res.status(401).json({ message: "Utilisateur non trouvé." });
-    }
+        // Vérifier le mot de passe
+        const isPasswordValid = await bcrypt.compare(password, foundUser.password);
+        if (!isPasswordValid) {
+            return res.status(401).json({ message: "Mot de passe incorrect." });
+        }
 
-    const isPasswordValid = await bcrypt.compare(password, foundUser.password);
-    
+        // Préparer le Payload (les infos à mettre dans le token)
+        const payload = {
+            id: foundUser.id,
+            name: foundUser.name,
+            email: foundUser.email,
+            role: foundUser.role
+        };
 
-    if (!isPasswordValid) {
-        return res.status(401).json({ message: "Mot de passe incorrect." });
-    }
-    // 2. Préparer le Payload (les infos à mettre dans le token) 
-    // -> id, email, role 
+        // Générer l'ACCESS Token (Court terme : 15 min)
+        const AccessToken = jwt.sign(
+            payload,
+            process.env.JWT_SECRET || "123456",
+            { expiresIn: "15m" }
+        );
 
-    const payload = {
-        id: foundUser.id,
-        name: foundUser.name,
-        email: foundUser.email,
-        role: foundUser.rolerue
-    };
+        // Générer le REFRESH Token (Long terme : 7 jours)
+        const RefreshToken = jwt.sign(
+            payload,
+            process.env.REFRESH_JWT_SECRET || "123456",
+            { expiresIn: "7d" }
+        );
 
-    // 3. Générer l'ACCESS Token (Court terme : 15 min) 
-    // -> Utiliser jwt.sign(payload, secret, options) 
-    const AccessToken = jwt.sign(
-      payload,
-      process.env.JWT_SECRET || "123456",
-      { expiresIn: "15m" }
-    );
+        // Stocker les infos dans la session Redis
+        req.session.userId = foundUser.id;
+        req.session.role = foundUser.role;
+        req.session.email = foundUser.email;
 
-    // 4. Générer le REFRESH Token (Long terme : 7 jours)
-    // -> Utiliser jwt.sign(payload, secret, options)
-    const RefreshToken = jwt.sign(
-      {
-        id: foundUser.id,
-        name: foundUser.name,
-        email: foundUser.email,
-        role: foundUser.role,
-      },
-      process.env.REFRESH_JWT_SECRET || "123456",
-      { expiresIn: "7d" }
-    );
+        // Sauvegarder la session et envoyer la réponse
+        req.session.save(err => {
+            if (err) {
+                console.error("Erreur sauvegarde session Redis:", err);
+                return res.status(500).json({ message: "Erreur de session" });
+            }
 
+            console.log("Session créée avec succès. Session ID:", req.sessionID);
 
-    // --- SESSION REDIS ---
-    req.session.test = "ça marche ?";
-    req.session.save(); // Force l'écriture
-    req.session.userId = foundUser.id;
-    req.session.role = foundUser.role;
-    req.session.save(err => {
-        if (err) console.error(err);
-    
-        // 5. Renvoyer les deux tokens au client (JSON) 
-        res.json({
-            AccessToken, RefreshToken
+            // Renvoyer les deux tokens au client
+            res.json({
+                AccessToken,
+                RefreshToken,
+                user: {
+                    id: foundUser.id,
+                    name: foundUser.name,
+                    email: foundUser.email,
+                    role: foundUser.role
+                }
+            });
         });
-    });
 
-    } catch (error) { 
-        console.error(error); 
-        res.status(500).json({ message: "Server error" }); 
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Server error" });
     }
 };
 
