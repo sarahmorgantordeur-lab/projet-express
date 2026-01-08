@@ -11,6 +11,7 @@ const errorHandler = require('./errors/errorHandler');
 
 // ... Imports existants (express, passport, etc.)
 const session = require('express-session');
+const { RedisStore } = require('connect-redis');
 const redis = require('./config/redis');// Notre fichier de config
 
 // Lancement de la conexion Redis
@@ -91,6 +92,7 @@ const todoRoutes = require('./routes/todo.routes');
 const userRoutes = require('./routes/users.routes');
 const tagRoutes = require('./routes/tag.routes');
 const authRoutes = require('./routes/auth.routes');
+const statsRoutes = require('./routes/stats.routes');
 
 
 app.get('/messages', (req, res) => res.json(messages));
@@ -113,6 +115,7 @@ app.use('/api/todos', todoRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/tags', tagRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api', statsRoutes);
 
 
 app.use(errorHandler);
