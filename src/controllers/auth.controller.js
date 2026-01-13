@@ -81,15 +81,10 @@ const login = async (req, res) => {
             { expiresIn: "7d" }
         );
 
-        // Stocker les infos dans la session Redis
-        req.session.userId = foundUser.id;
-        req.session.role = foundUser.role;
-        req.session.email = foundUser.email;
-
-        // Sauvegarder la session et envoyer la réponse
-        req.session.save(err => {
+        // Utiliser Passport pour sérialiser l'utilisateur dans la session
+        req.login(foundUser, (err) => {
             if (err) {
-                console.error("Erreur sauvegarde session Redis:", err);
+                console.error("Erreur lors de la connexion Passport:", err);
                 return res.status(500).json({ message: "Erreur de session" });
             }
 
@@ -152,8 +147,24 @@ const refreshToken = async (req, res) => {
     }); 
 };
 
+const logout = async (req, res) => {
+    req.logout((err) => {
+        if (err) {
+            return res.status(500).json({ message: "Erreur lors de la déconnexion" });
+        }
+        req.session.destroy((err) => {
+            if (err) {
+                return res.status(500).json({ message: "Erreur lors de la destruction de la session" });
+            }
+            res.clearCookie('connect.sid');
+            res.json({ message: "Déconnexion réussie" });
+        });
+    });
+};
+
 module.exports = {
     register,
     login,
-    refreshToken
+    refreshToken,
+    logout
 };

@@ -9,18 +9,20 @@
     "express-session": "^1.18.2",
     "helmet": "^8.1.0",
     "hpp": "^0.2.3",
-    "redis": "^5.0.0",
     "jsonwebtoken": "^9.0.3",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
+    "redis": "^5.0.0",
     "reflect-metadata": "^0.2.2",
+    "socket.io": "^4.8.3",
     "sqlite3": "^5.1.7",
     "typeorm": "^0.3.28",
     "xss": "^1.0.15",
     "zod": "^4.3.5"
   },
   "devDependencies": {
+    "autocannon": "^8.0.0",
     "nodemon": "^3.1.11"
   },
   "name": "projet-express",
