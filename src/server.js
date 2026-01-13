@@ -40,13 +40,49 @@ io.on("connection", (socket) => {
   socket.join("global");
   console.log(`${user.name} a rejoint le canal global`);
   
-  socket.on('chat_message', (data) => {
-    console.log(`Message reçu de ${user.name}: ${data.message}`);
-    io.to("global").emit("new_message", {
-      from: user.name,
-      message: data.message,
-      time: new Date().toLocaleTimeString()
-    });
+  socket.on('send_message', async (data) => {
+    try {
+      console.log(`Message reçu de ${user.name}:`, data.message);
+
+      if (!data.message || data.message.trim() === '') {
+        console.log('Message vide, non enregistré.');
+        return;
+      }
+
+      // Récupérer l'utilisateur complet depuis la base de données
+      const userRepository = AppDataSource.getRepository('User');
+      const fullUser = await userRepository.findOne({ where: { id: user.id } });
+
+      if (!fullUser) {
+        console.error('Utilisateur introuvable dans la base de données');
+        socket.emit("error", {
+          message: "Utilisateur introuvable.",
+        });
+        return;
+      }
+
+      const messageRepository = AppDataSource.getRepository('Message');
+      const newMessage = messageRepository.create({
+        content: data.message,
+        sender: fullUser,
+        room: 'general',
+      });
+
+      await messageRepository.save(newMessage);
+      console.log('Message enregistré dans la base de données.', newMessage.id);
+
+      io.to("global").emit("new_message", {
+        from: user.name,
+        message: data.message,
+        time: newMessage.createdAt.toLocaleTimeString()
+      });
+
+    } catch (error) {
+      console.error("Erreur lors de l'enregistrement du message :", error);
+      socket.emit("error", {
+        message: "Erreur lors de l'enregistrement du message.",
+      });
+    }
   });
 
   socket.on("disconnect", () => {
@@ -75,6 +111,8 @@ app.post("/api/admin/notify/:userId", (req, res) => {
   });
   res.json({ status: "Notification envoyée", target: targetUserId });
 });
+
+AppDataSource.setOptions({ entities: [require('./models/message.entity'), require('./models/user.entity'), require('./models/tags.entity'), require('./models/todo.entity')] });
 
 AppDataSource.initialize()
   .then(() => {
